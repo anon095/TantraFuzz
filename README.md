@@ -1,19 +1,21 @@
-echo '# 🔥 TantraFuzz 🔥
-
-> An AI-powered offensive security framework based on Tantric principles.
-
-TantraFuzz is an advanced tool for web application security testing that embodies the cyclical and interconnected nature of the tantric path. It moves beyond simple, generic payloads towards a context-aware, technique-driven methodology, using AI to evolve its attacks in real-time.
-
-## 🕉️ The Philosophy
-
-- **Sankalpa (Intention):** The focused intent to bypass, uncover, and exploit vulnerabilities.
-- **Yantra (Structure):** A modular, geometric framework that acts as a force multiplier.
-- **Mantra (Payload):** Each payload is a specific vibration, a mantra designed to deceive, bypass, and penetrate defenses.
-- **Tantra (Continuum):** The infinite loop of recon, mutation, attack, analysis, and AI-driven evolution until success.
-- **Bindu (Singularity):** The ultimate point of a successful bypass or exploit.
-
----
-
-## 🏗️ Yantra (The Sacred Architectural Blueprint)
-
-The framework''s structure is a logical, modular *yantra* that separates resources for discovery from those for exploitation.
+TantraFuzz moves beyond static scanning by embodying the cyclical and interconnected nature of the Tantric path. It is a dual-tool suite composed of a Recon Engine that sees, and a Fuzzer that attacks. The eyes guide the fists.🕉️ The PhilosophySankalpa (Intention): The focused intent to bypass, uncover, and exploit vulnerabilities through deep understanding.Yantra (Structure): A modular, dual-tool architecture that acts as a force multiplier, separating reconnaissance from exploitation.Mantra (Payload): Each payload is a specific vibration, intelligently crafted and mutated by AI to deceive, bypass, and penetrate defenses.Tantra (Continuum): The infinite loop of real-time discovery, contextual analysis, AI-driven mutation, and adaptive attack until success is achieved.Bindu (Singularity): The ultimate point of a successful bypass or exploit, achieved through persistent, intelligent effort.🏗️ Core ComponentsThe framework is comprised of two powerful, symbiotic Go binaries.Ⅰ. tantrafuzz-recon (The Eyes)A supreme-level reconnaissance engine designed to build a deep, comprehensive understanding of the target's attack surface.Key Features:✅ Live "Deep Dive" Enumeration: Queries multiple real-world APIs (crt.sh, AlienVault OTX, Wayback Machine) for legitimate, accurate subdomain and endpoint data.✅ Persistent Monitoring: A monitor mode connects to real-time Certificate Transparency Log streams to discover new subdomains the moment they are created.✅ Stateful Awareness: Utilizes an embedded database (BadgerDB) to store scan results, enabling powerful change detection to identify new assets over time.✅ AI-Assisted Expansion: Leverages the Gemini AI to predict and discover likely subdomain patterns based on target context.✅ Deep Intelligence Gathering: Concurrently fingerprints WAFs, server technologies, and parses JavaScript files for secrets and hidden API endpoints.✅ Structured Output: Generates detailed JSON reports that serve as the "battle map" for the fuzzing engine.Ⅱ. tantrafuzz (The Fists)A recon-driven, behavioral-adaptive fuzzing engine that uses the intelligence gathered by the recon tool to launch hyper-aware, intelligent attacks.Key Features:✅ Recon-Driven Targeting: Ingests the JSON report from tantrafuzz-recon to automatically identify and attack every discovered endpoint and parameter.✅ Behavioral-Adaptive Mutation: The core of the fuzzer. It analyzes why a payload fails (e.g., "Blocked by Cloudflare," "Reflected in JSON") and feeds this context to the AI.✅ Recursive AI Loop: If an initial payload fails, the Gemini AI is invoked to generate a superior, mutated payload specifically designed to bypass the detected defense in the observed context. The attack is then re-launched.✅ Context-Aware Payloads: The AI considers the detected WAF, backend technologies, and reflection context when crafting new bypasses.⚡ The Tantric Workflow: Recon-to-ExploitThe framework is designed to be used in a sequential pipeline for maximum effectiveness.+---------------------------+      +---------------------------+      +--------------------------+
+|      1. RECONNAISSANCE    |      |      2. INTELLIGENCE      |      |      3. ADAPTIVE ATTACK  |
+|   (tantrafuzz-recon)      |----->|      (recon_report.json)  |----->|      (tantrafuzz)        |
++---------------------------+      +---------------------------+      +--------------------------+
+| - Discover Subdomains     |      | - Subdomains              |      | - Ingests Recon Report   |
+| - Harvest Endpoints       |      | - Endpoints & Parameters  |      | - Fuzzes All Targets     |
+| - Fingerprint WAF/Tech    |      | - WAF & Tech Stack        |      | - Analyzes Responses     |
+| - Mine JS for Secrets     |      | - Potential Secrets       |      | - AI Mutates on Failure  |
+| - Run Real-Time Monitor   |      | - CORS Issues             |      | - Re-attacks until       |
+|                           |      |                           |      |   Bypass/Success         |
++---------------------------+      +---------------------------+      +--------------------------+
+🚀 Installation & BuildThe framework is written in pure Go and is easy to build from source.Clone the Repository:git clone [https://github.com/anon095/TantraFuzz.git](https://github.com/anon095/TantraFuzz.git)
+cd TantraFuzz
+Install Dependencies:go mod tidy
+Build the Binaries:This command will create the two executable files in your project root.go build -o tantrafuzz ./cmd/tantrafuzz/
+go build -o tantrafuzz-recon ./cmd/tantrafuzz-recon/
+⚙️ ConfigurationThe framework requires a Google AI (Gemini) API key for its AI-powered features.Set Environment Variable: The API key must be provided as an environment variable for security.export GEMINI_API_KEY="YOUR_REAL_API_KEY_HERE"
+🕹️ Usage GuideStep 1: Deep Reconnaissance ScanRun tantrafuzz-recon to perform a one-off, deep-dive scan on your target../tantrafuzz-recon -d testphp.vulnweb.com -o testphp.json -v --ai-assist --deep-js
+--domain: The target to scan.--output: The file to save the final JSON intelligence report.--verbose: Shows real-time discovery logs.--ai-assist: Enables AI for subdomain suggestions.--deep-js: Enables JavaScript mining for secrets and endpoints.Step 2: Launch the Adaptive FuzzerFeed the intelligence report from Step 1 directly into the tantrafuzz fuzzer../tantrafuzz --recon-file testphp.json -v sqli --ai-mutate
+--recon-file: The intelligence report to use for targeting.-v, --vuln-type: The class of vulnerability to test for (e.g., sqli, xss).--ai-mutate: Enables the recursive AI mutation loop if initial payloads fail.(Optional) Step 3: Persistent Real-Time MonitoringTo continuously watch a target for new assets, run the recon engine in monitor mode../tantrafuzz-recon monitor -d testphp.vulnweb.com --db-path ./testphp_db -v
+monitor: The sub-command to activate real-time mode.--db-path: The directory to store the persistent database for change detection.🤝 ContributingContributions are welcome! Please feel free to submit a pull request with bug fixes or improvements. You can also contribute by:Adding new, high-quality payloads to the /payloads directory.Adding new recon data sources or fingerprinting signatures.Reporting bugs and suggesting new features.📜 LicenseThis project is licensed under the MIT License. See the LICENSE file for details.
