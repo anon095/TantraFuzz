@@ -5,14 +5,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/anon095/TantraFuzz/internal/payload" // Import our new payload package
+	"github.com/anon095/TantraFuzz/internal/fuzzer"  // Import the fuzzer
+	"github.com/anon095/TantraFuzz/internal/payload" // Import our payload package
 	"github.com/spf13/cobra"
 )
 
 var (
-	targetURL string
-	param     string
-	vulnType  string
+	targetURL  string
+	param      string
+	vulnType   string
+	configFile string
 )
 
 var rootCmd = &cobra.Command{
@@ -25,25 +27,24 @@ tactics towards a more intelligent, targeted approach.`,
 		fmt.Println("🔥 TantraFuzz Initializing 🔥")
 		fmt.Println("--------------------------------")
 		fmt.Printf("Target URL: %s\n", targetURL)
-		fmt.Printf("Vulnerability Type: %s\n", vulnType)
+		fmt.Printf("Parameter:  %s\n", param)
+		fmt.Printf("Vuln Type:  %s\n", vulnType)
 		fmt.Println("--------------------------------")
 
-		// Load payloads based on the vulnerability type flag
+		// For now, we are not using the main config loader from previous steps
+		// to keep this step focused. We'll add it back later.
+		// A default user agent is used in the fuzzer.
+
+		// 1. Load payloads
 		payloads, err := payload.LoadPayloads(vulnType)
 		if err != nil {
 			log.Fatalf("💀 Error loading payloads: %v", err)
 		}
+		log.Printf("✅ Successfully loaded %d payloads for '%s'.", len(payloads), vulnType)
 
-		fmt.Printf("✅ Successfully loaded %d payloads for '%s'.\n\n", len(payloads), vulnType)
-
-		// Print the details of each loaded payload
-		for i, p := range payloads {
-			fmt.Printf("--- Payload %d ---\n", i+1)
-			fmt.Printf("Content: %s\n", p.Content)
-			fmt.Printf("  Source: %s\n", p.Source)
-			fmt.Printf("  Target: %s\n", p.Target)
-			fmt.Printf("  Purpose: %s\n", p.Purpose)
-		}
+		// 2. Start the fuzzer
+		// We'll pass a default User-Agent for now.
+		fuzzer.Start(targetURL, param, payloads, "TantraFuzz/0.2")
 	},
 }
 
@@ -56,8 +57,10 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&targetURL, "url", "u", "", "The target URL to scan (required)")
-	rootCmd.PersistentFlags().StringVarP(&param, "param", "p", "", "The specific parameter to fuzz")
-	rootCmd.PersistentFlags().StringVarP(&vulnType, "vuln-type", "v", "", "Vulnerability type to test for (e.g., xss, sqli)")
+	rootCmd.PersistentFlags().StringVarP(&param, "param", "p", "", "The specific parameter to fuzz (required)")
+	rootCmd.PersistentFlags().StringVarP(&vulnType, "vuln-type", "v", "", "Vulnerability type to test for (e.g., xss, sqli) (required)")
+	
 	rootCmd.MarkPersistentFlagRequired("url")
-	rootCmd.MarkPersistentFlagRequired("vuln-type") // Making vuln-type required for this test
+	rootCmd.MarkPersistentFlagRequired("param")
+	rootCmd.MarkPersistentFlagRequired("vuln-type")
 }
