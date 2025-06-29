@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-06-29T02:04:03.027593981Z",
+  "domain": "target.com",
+  "subdomains": [
+    "test.target.com",
+    "internal.target.com",
+    "api.target.com",
+    "ftp.target.com",
+    "dev.google.com",
+    "www.target.com",
+    "support.target.com",
+    "careers.target.com",
+    "api.google.com",
+    "mail.google.com",
+    "www.google.com",
+    "dev.target.com",
+    "mail.target.com",
+    "login.target.com"
+  ],
+  "endpoints": [
+    ""
+  ],
+  "parameters": null,
+  "js_files_with_findings": [],
+  "api_discovery": [],
+  "waf": "Not Detected",
+  "cors_issues": null,
+  "technologies": null,
+  "request_smuggling_status": ""
+}

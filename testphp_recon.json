@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-06-29T03:25:27.940227476Z",
+  "domain": "testphp.vulnweb.com",
+  "subdomains": [
+    "api.google.com",
+    "mail.google.com",
+    "dev.google.com",
+    "www.google.com"
+  ],
+  "endpoints": [
+    ""
+  ],
+  "parameters": null,
+  "js_files_with_findings": [],
+  "api_discovery": [],
+  "waf": "",
+  "cors_issues": null,
+  "technologies": null,
+  "request_smuggling_status": ""
+}

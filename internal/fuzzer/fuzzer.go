@@ -1,68 +1,119 @@
 package fuzzer
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
-	"github.com/anon095/TantraFuzz/internal/analyzer" // Import the analyzer
+	"github.com/anon095/TantraFuzz/internal/analyzer"
 	"github.com/anon095/TantraFuzz/internal/payload"
 )
 
-// Start begins the fuzzing process.
-func Start(baseURL, paramToFuzz string, payloads []payload.Payload, userAgent string) {
-	log.Println("🚀 Fuzzer Chakra activated. Beginning attack sequence...")
+// Fuzzer manages the concurrent fuzzing process.
+type Fuzzer struct {
+	BaseURL      string
+	ParamToFuzz  string
+	Payloads     []payload.Payload
+	UserAgent    string
+	Concurrency  int
+	HTTPClient   *http.Client
+	VulnType     string
+}
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
+// Job represents a single fuzzing task.
+type Job struct {
+	Payload payload.Payload
+}
+
+// Result holds the outcome of a single job.
+// This is corrected to hold the entire AnalysisResult.
+type Result struct {
+	Analysis *analyzer.AnalysisResult
+}
+
+// NewFuzzer creates and configures a new fuzzer instance.
+func NewFuzzer(baseURL, param, userAgent, vulnType string, payloads []payload.Payload, concurrency, timeoutSec int) *Fuzzer {
+	return &Fuzzer{
+		BaseURL:     baseURL,
+		ParamToFuzz: param,
+		Payloads:    payloads,
+		UserAgent:   userAgent,
+		Concurrency: concurrency,
+		HTTPClient: &http.Client{
+			Timeout: time.Duration(timeoutSec) * time.Second,
+		},
+		VulnType:    vulnType,
+	}
+}
+
+// Start launches the fuzzer and returns the analysis results.
+func (f *Fuzzer) Start() []*analyzer.AnalysisResult {
+	log.Printf("🚀 Fuzzer Chakra activated. Beginning attack sequence with %d workers...", f.Concurrency)
+
+	jobs := make(chan Job, len(f.Payloads))
+	results := make(chan Result, len(f.Payloads))
+	var analysisResults []*analyzer.AnalysisResult
+
+	var wg sync.WaitGroup
+
+	for i := 0; i < f.Concurrency; i++ {
+		wg.Add(1)
+		go f.worker(&wg, jobs, results)
 	}
 
-	for _, p := range payloads {
-		targetURL, err := url.Parse(baseURL)
+	for _, p := range f.Payloads {
+		jobs <- Job{Payload: p}
+	}
+	close(jobs)
+
+	wg.Wait()
+	close(results)
+
+	for res := range results {
+		if res.Analysis != nil {
+			analysisResults = append(analysisResults, res.Analysis)
+		}
+	}
+
+	return analysisResults
+}
+
+func (f *Fuzzer) worker(wg *sync.WaitGroup, jobs <-chan Job, results chan<- Result) {
+	defer wg.Done()
+	for job := range jobs {
+		targetURL, err := url.Parse(f.BaseURL)
 		if err != nil {
-			log.Printf("💀 Invalid base URL %s: %v", baseURL, err)
+			log.Printf("💀 Invalid base URL %s: %v", f.BaseURL, err)
 			continue
 		}
 
 		queryParams := targetURL.Query()
-		queryParams.Set(paramToFuzz, p.Content)
+		queryParams.Set(f.ParamToFuzz, job.Payload.Content)
 		targetURL.RawQuery = queryParams.Encode()
 
 		req, err := http.NewRequest("GET", targetURL.String(), nil)
 		if err != nil {
-			log.Printf("💀 Failed to create request for payload '%s': %v", p.Content, err)
+			log.Printf("💀 Failed to create request for payload '%s': %v", job.Payload.Content, err)
 			continue
 		}
-		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("User-Agent", f.UserAgent)
 
-		fmt.Printf("✨ Sending payload: %s\n", p.Content)
-		resp, err := client.Do(req)
+		resp, err := f.HTTPClient.Do(req)
 		if err != nil {
-			log.Printf("💀 Request failed for payload '%s': %v", p.Content, err)
+			log.Printf("💀 Request failed for payload '%s': %v", job.Payload.Content, err)
 			continue
 		}
 
-		// *** NEW: Pass the response to the Analyzer ***
-		finding, err := analyzer.AnalyzeResponse(resp, "sqli", p.Content)
+		// Corrected call to AnalyzeResponse with two arguments
+		analysis, err := analyzer.AnalyzeResponse(resp, job.Payload.Content)
 		if err != nil {
-			log.Printf("💀 Error analyzing response: %v", err)
+			log.Printf("💀 Error analyzing response for payload '%s': %v", job.Payload.Content, err)
 		}
-
-		// Close the body after analysis is complete
 		resp.Body.Close()
 
-		if finding != nil {
-			// A potential vulnerability was found!
-			fmt.Println("=====================================================")
-			fmt.Println("🚨🚨🚨 POTENTIAL VULNERABILITY FOUND! 🚨🚨🚨")
-			fmt.Printf("  Payload:  %s\n", finding.Payload)
-			fmt.Printf("  Evidence: Found matching pattern '%s'\n", finding.Evidence)
-			fmt.Println("=====================================================")
-		} else {
-			// Report the normal status if nothing was found
-			log.Printf("✅ Response for payload '%s': [%s] (No findings)", p.Content, resp.Status)
-		}
+		// Corrected assignment to the Result struct
+		results <- Result{Analysis: analysis}
 	}
 }

@@ -1,66 +1,113 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
-	"github.com/anon095/TantraFuzz/internal/fuzzer"  // Import the fuzzer
-	"github.com/anon095/TantraFuzz/internal/payload" // Import our payload package
+	"github.com/anon095/TantraFuzz/internal/analyzer"
+	"github.com/anon095/TantraFuzz/internal/api"
+	ctx "github.com/anon095/TantraFuzz/internal/context"
+	"github.com/anon095/TantraFuzz/internal/fuzzer"
+	"github.com/anon095/TantraFuzz/internal/mutation"
+	"github.com/anon095/TantraFuzz/internal/payload"
 	"github.com/spf13/cobra"
 )
 
 var (
-	targetURL  string
-	param      string
-	vulnType   string
-	configFile string
+	reconFile      string
+	aiMutate       bool
+	vulnType       string
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "tantrafuzz",
-	Short: "TantraFuzz is an AI-powered offensive security framework.",
-	Long: `A context-aware, technique-driven security tool that uses AI to 
-evolve its attacks in real-time. It moves beyond simple "spray-and-pray" 
-tactics towards a more intelligent, targeted approach.`,
+	Short: "A recon-driven, AI-powered, adaptive fuzzing engine.",
+	Long: `TantraFuzz uses reconnaissance data to craft context-aware payloads,
+then enters a recursive AI-mutation loop to bypass defenses in real-time.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🔥 TantraFuzz Initializing 🔥")
-		fmt.Println("--------------------------------")
-		fmt.Printf("Target URL: %s\n", targetURL)
-		fmt.Printf("Parameter:  %s\n", param)
-		fmt.Printf("Vuln Type:  %s\n", vulnType)
-		fmt.Println("--------------------------------")
+		log.Println("🔥 TantraFuzz Fuzzer Initializing 🔥")
 
-		// For now, we are not using the main config loader from previous steps
-		// to keep this step focused. We'll add it back later.
-		// A default user agent is used in the fuzzer.
-
-		// 1. Load payloads
-		payloads, err := payload.LoadPayloads(vulnType)
+		log.Printf("Ingesting recon data from: %s", reconFile)
+		targetCtx, err := ctx.LoadContextFromFile(reconFile)
 		if err != nil {
-			log.Fatalf("💀 Error loading payloads: %v", err)
+			log.Fatalf("💀 Failed to load recon file: %v", err)
 		}
-		log.Printf("✅ Successfully loaded %d payloads for '%s'.", len(payloads), vulnType)
+		log.Printf("✅ Context loaded for domain '%s'. WAF: %s.", targetCtx.Domain, targetCtx.WAF)
 
-		// 2. Start the fuzzer
-		// We'll pass a default User-Agent for now.
-		fuzzer.Start(targetURL, param, payloads, "TantraFuzz/0.2")
+		initialPayloads, err := payload.LoadPayloads(vulnType)
+		if err != nil {
+			log.Fatalf("💀 Failed to load payloads for vuln-type '%s': %v", vulnType, err)
+		}
+
+		var mutator *mutation.Mutator
+		if aiMutate {
+			apiKey := os.Getenv("GEMINI_API_KEY")
+			if apiKey == "" {
+				log.Fatal("💀 --ai-mutate flag requires GEMINI_API_KEY environment variable to be set.")
+			}
+			apiClient := api.NewClient(apiKey)
+			mutator = mutation.NewMutator(apiClient)
+		}
+
+		for _, endpoint := range targetCtx.Endpoints {
+			for _, param := range targetCtx.Parameters {
+				log.Printf("🎯 Targeting endpoint: %s with parameter: %s", endpoint, param)
+
+				fuzz := fuzzer.NewFuzzer(endpoint, param, "TantraFuzz/1.0", vulnType, initialPayloads, 20, 10)
+				analysisResults := fuzz.Start()
+
+				found := false
+				var lastFailedResult *analyzer.AnalysisResult
+				// Corrected loop to handle the new result structure
+				for _, result := range analysisResults {
+					if result.Finding != nil {
+						log.Printf("🎉 VULNERABILITY FOUND: %s", result.Finding.Evidence)
+						found = true
+						break
+					}
+					lastFailedResult = result
+				}
+
+				if found {
+					continue
+				}
+
+				if aiMutate && lastFailedResult != nil {
+					log.Printf("Initial scan failed. Invoking AI with last result: Blocked=%t, Reflected=%t in %s context.", lastFailedResult.IsBlocked, lastFailedResult.IsReflected, lastFailedResult.ReflectionContext)
+					
+					mutatedPayload, err := mutator.MutateWithAI(initialPayloads[0], targetCtx, lastFailedResult)
+					if err != nil {
+						log.Printf("💀 AI mutation failed: %v", err)
+						continue
+					}
+					
+					log.Println("🚀 Re-running scan with single AI-generated payload...")
+					aiFuzzer := fuzzer.NewFuzzer(endpoint, param, "TantraFuzz/1.0", vulnType, []payload.Payload{*mutatedPayload}, 1, 10)
+					aiAnalysisResults := aiFuzzer.Start()
+
+					for _, result := range aiAnalysisResults {
+						if result.Finding != nil {
+							log.Printf("🎉 VULNERABILITY FOUND WITH AI-MUTATED PAYLOAD: %s", result.Finding.Evidence)
+							found = true
+							break
+						}
+					}
+				}
+			}
+		}
+		log.Println("✨ Fuzzing cycle complete.")
 	},
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&targetURL, "url", "u", "", "The target URL to scan (required)")
-	rootCmd.PersistentFlags().StringVarP(&param, "param", "p", "", "The specific parameter to fuzz (required)")
-	rootCmd.PersistentFlags().StringVarP(&vulnType, "vuln-type", "v", "", "Vulnerability type to test for (e.g., xss, sqli) (required)")
-	
-	rootCmd.MarkPersistentFlagRequired("url")
-	rootCmd.MarkPersistentFlagRequired("param")
-	rootCmd.MarkPersistentFlagRequired("vuln-type")
+	rootCmd.Flags().StringVar(&reconFile, "recon-file", "", "Path to the JSON output from the TantraFuzz-Recon engine (required)")
+	rootCmd.Flags().StringVarP(&vulnType, "vuln-type", "v", "sqli", "Vulnerability type to test for (e.g., sqli, xss)")
+	rootCmd.Flags().BoolVar(&aiMutate, "ai-mutate", false, "Enable AI-driven payload mutation if initial scan fails")
+	rootCmd.MarkFlagRequired("recon-file")
 }

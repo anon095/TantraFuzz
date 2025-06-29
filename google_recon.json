@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-06-29T02:03:16.087084589Z",
+  "domain": "google.com",
+  "subdomains": [
+    "ads.google.com",
+    "www.google.com",
+    "dev.google.com",
+    "accounts.google.com",
+    "docs.google.com",
+    "calendar.google.com",
+    "groups.google.com",
+    "analytics.google.com",
+    "search.google.com",
+    "api.google.com",
+    "mail.google.com",
+    "support.google.com",
+    "drive.google.com"
+  ],
+  "endpoints": [
+    ""
+  ],
+  "parameters": null,
+  "js_files_with_findings": [],
+  "api_discovery": [],
+  "waf": "Not Detected",
+  "cors_issues": null,
+  "technologies": null,
+  "request_smuggling_status": ""
+}
