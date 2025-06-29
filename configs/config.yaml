@@ -1,0 +1,15 @@
+# TantraFuzz Configuration File
+
+# Gemini AI API Configuration
+# The API key is now loaded from the GEMINI_API_KEY environment variable.
+gemini: {}
+
+# Fuzzer Settings
+fuzzer:
+  # Number of concurrent threads to use for fuzzing
+  concurrency: 10
+  # Timeout in seconds for each HTTP request
+  timeout: 5
+  # Default User-Agent to use for requests
+  user_agent: "TantraFuzz/0.1"
+
